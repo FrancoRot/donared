@@ -3,44 +3,34 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from .models import Item, Zona, Categoria
-from .services.item_service import ItemService
+from .forms import ItemForm
 import os
 
 @login_required
 def publicar(request):
     if request.method == "POST":
-        # delegamos en service para la lógica de negocio
-        item_service = ItemService()
-        result = item_service.crear_item(request.POST, files=request.FILES, user=request.user)
-        
-        if result['success']:
-            messages.success(request, "¡Item publicado con éxito!")
-            return redirect("donaredapp:tarjeta", item_id=result['item'].id)
+        form = ItemForm(request.POST, request.FILES)
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.usuario = request.user
+            # Guardar las coordenadas obtenidas del formulario
+            item.latitude = form.latitude
+            item.longitude = form.longitude
+            item.save()
+            messages.success(request, f"¡Item publicado con éxito! Coordenadas: lat={item.latitude}, lon={item.longitude}")
+            return redirect("donaredapp:tarjeta", item_id=item.id)
         else:
-            # Return errors from the service
-            messages.error(request, result['error'])
-            # Return to form with entered data
-            zonas = Zona.objects.all()
-            categorias = Categoria.objects.all()
-            context = {
-                "zonas": zonas,
-                "categorias": categorias,
-                'MAX_IMAGE_SIZE_MB': settings.MAX_IMAGE_SIZE_MB,
-                'MAX_IMAGE_SIZE_BYTES': settings.MAX_IMAGE_SIZE_BYTES,
-                "form_data": request.POST,  # Pass back the form data
-            }
-            return render(request, "donaredapp/publicar.html", context)
-    
-    #asumiendo que el método es GET
+            messages.error(request, "Por favor, corrija los errores en el formulario.")
     else:
-        zonas = Zona.objects.all()
-        categorias = Categoria.objects.all()
-        context = {
-            "zonas": zonas,
-            "categorias": categorias,
-        }
-        return render(request, "donaredapp/publicar.html", context)
+        form = ItemForm()
     
+    context = {
+        "form": form,
+        'MAX_IMAGE_SIZE_MB': settings.MAX_IMAGE_SIZE_MB,
+        'MAX_IMAGE_SIZE_BYTES': settings.MAX_IMAGE_SIZE_BYTES,
+    }
+    return render(request, "donaredapp/publicar.html", context)
+
 @login_required
 def editar_item(request, item_id):
     try:

@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from .models import Item, Zona, Categoria
+import requests
+from django.conf import settings
 
 class UserRegistrationForm(UserCreationForm):
     """
@@ -41,3 +44,64 @@ class PasswordRecoveryForm(forms.Form):
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={'class': 'form-control', 'id': 'id_email'})
     )
+
+class ItemForm(forms.ModelForm):
+    direccion = forms.CharField(
+        max_length=200,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ingrese la dirección completa',
+            'id': 'direccion'
+        })
+    )
+
+    class Meta:
+        model = Item
+        fields = ['nombre', 'descripcion', 'zona', 'categoria', 'imagen', 'direccion']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'zona': forms.Select(attrs={'class': 'form-control'}),
+            'categoria': forms.Select(attrs={'class': 'form-control'}),
+            'imagen': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+
+    def clean_direccion(self):
+        direccion = self.cleaned_data.get('direccion')
+        if direccion:
+            # Agregar "Buenos Aires, Argentina" para mejorar la precisión
+            direccion_completa = f"{direccion}, Buenos Aires, Argentina"
+            print(f"Intentando geocodificar: {direccion_completa}")
+            
+            # Usar Nominatim para geocodificación
+            url = f"https://nominatim.openstreetmap.org/search"
+            params = {
+                'q': direccion_completa,
+                'format': 'json',
+                'limit': 1
+            }
+            headers = {
+                'User-Agent': 'DonaRed/1.0'  # Identificador de la aplicación
+            }
+            
+            try:
+                response = requests.get(url, params=params, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+                print(f"Respuesta de geocodificación: {data}")
+                
+                if data:
+                    # Guardar las coordenadas en el formulario para usarlas después
+                    self.latitude = float(data[0]['lat'])
+                    self.longitude = float(data[0]['lon'])
+                    print(f"Coordenadas obtenidas: lat={self.latitude}, lon={self.longitude}")
+                    return direccion
+                else:
+                    print("No se encontraron resultados de geocodificación")
+                    raise forms.ValidationError("No se pudo encontrar la ubicación. Por favor, verifique la dirección.")
+            except requests.RequestException as e:
+                print(f"Error en la geocodificación: {str(e)}")
+                raise forms.ValidationError("Error al validar la dirección. Por favor, intente nuevamente.")
+        
+        return direccion

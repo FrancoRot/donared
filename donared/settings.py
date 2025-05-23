@@ -40,6 +40,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'donaredapp.apps.DonaredappConfig',
     'novedades.apps.NovedadesConfig',
+    'geo_donaciones.apps.GeoDonacionesConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

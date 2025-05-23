@@ -59,6 +59,9 @@ class Item(models.Model):
     )
     imagen = models.ImageField(upload_to='items/', null=True, blank=True)
     activo = models.BooleanField(default=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    direccion = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
         return self.nombre

@@ -26,6 +26,7 @@ urlpatterns = [
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
     path('admin/', admin.site.urls),
     path('novedades/', include('novedades.urls')),
+    path('geo/', include('geo_donaciones.urls')),
     #Chequear estos logins
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
